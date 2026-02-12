@@ -1,0 +1,9 @@
+body {
+    margin: 0;
+    background: #333;
+}
+canvas {
+    display: block;
+    margin: auto;
+    background: #7cfc00; /* пока зелёная карта для теста */
+}
