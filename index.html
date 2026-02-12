@@ -2,11 +2,85 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Stronghold Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stronghold Web RTS</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <canvas id="gameCanvas" width="1024" height="768"></canvas>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="menuOverlay" class="overlay">
+        <div class="menu-card">
+            <h1>Stronghold Web RTS</h1>
+            <p class="menu-subtitle">Изометрия, строительство, бои, AI-боты, сохранения</p>
+
+            <label class="field">
+                <span>Режим</span>
+                <select id="modeSelect">
+                    <option value="pve">Игрок против ботов</option>
+                    <option value="pvp">Игрок против игрока (локально)</option>
+                </select>
+            </label>
+
+            <label class="field" id="botCountField">
+                <span>Количество ботов</span>
+                <select id="botCountSelect">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="3">3</option>
+                </select>
+            </label>
+
+            <div class="menu-actions">
+                <button id="newGameBtn" class="primary">Новая игра</button>
+                <button id="loadGameBtn">Загрузить сохранение</button>
+            </div>
+
+            <p id="menuHint" class="menu-hint">Сохранение: localStorage браузера</p>
+        </div>
+    </div>
+
+    <section id="hud" class="hud hidden">
+        <header class="top-bar">
+            <div class="resources" id="resourcesBox">
+                <div class="resource"><img src="assets/icons/wood.png" alt="wood"><span id="resWood">0</span></div>
+                <div class="resource"><img src="assets/icons/stone.png" alt="stone"><span id="resStone">0</span></div>
+                <div class="resource"><img src="assets/icons/food.png" alt="food"><span id="resFood">0</span></div>
+                <div class="resource"><img src="assets/icons/gold.png" alt="gold"><span id="resGold">0</span></div>
+                <div class="resource"><span id="resPop">0/0</span></div>
+            </div>
+
+            <div class="quick-actions">
+                <button id="pauseBtn">Пауза</button>
+                <button id="saveBtn">Сохранить</button>
+                <button id="loadBtn">Загрузить</button>
+                <button id="menuBtn">В меню</button>
+            </div>
+        </header>
+
+        <aside class="side-panel">
+            <section>
+                <h3>Строительство</h3>
+                <button class="build-btn" data-build="house">Дом (55W/25S)</button>
+                <button class="build-btn" data-build="farm">Ферма (45W/10S)</button>
+                <button class="build-btn" data-build="barracks">Казарма (90W/55S/30G)</button>
+            </section>
+
+            <section>
+                <h3>Юниты</h3>
+                <button id="trainVillagerBtn">Крестьянин (35F/10G)</button>
+                <button id="trainSwordsmanBtn">Мечник (10W/25F/35G)</button>
+            </section>
+
+            <section>
+                <h3>Управление</h3>
+                <p id="controlsText">Q/E поворот, ПКМ движение/атака, у края экрана - прокрутка камеры.</p>
+                <p id="activePlayerText">Активный игрок: -</p>
+                <p id="statusText">Статус: -</p>
+            </section>
+        </aside>
+    </section>
+
     <script type="module" src="js/game.js"></script>
 </body>
 </html>
