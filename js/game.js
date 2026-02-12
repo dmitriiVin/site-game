@@ -106,6 +106,7 @@ class RTSGame {
         this.economyTimer = 0;
 
         this.activeCommanderId = 0;
+        this.initialGrantApplied = false;
 
         if (config.saveData) {
             this.loadFromData(config.saveData);
@@ -117,8 +118,33 @@ class RTSGame {
             this.spawnStartingState();
         }
 
+        this.applyInitialResourceGrant();
         this.recalculatePopulationAll();
         this.centerCameraOnPlayer(this.activeCommanderId);
+    }
+
+    applyInitialResourceGrant() {
+        if (this.initialGrantApplied) {
+            return;
+        }
+
+        if (!Array.isArray(this.players) || this.players.length === 0) {
+            this.players = this.createPlayers(this.mode, this.botCount);
+        }
+
+        for (const player of this.players) {
+            player.resources = normalizeResources(player.resources);
+            player.resources.wood = Math.max(player.resources.wood, DEFAULT_RESOURCES.wood);
+            player.resources.stone = Math.max(player.resources.stone, DEFAULT_RESOURCES.stone);
+            player.resources.food = Math.max(player.resources.food, DEFAULT_RESOURCES.food);
+            player.resources.gold = Math.max(player.resources.gold, DEFAULT_RESOURCES.gold);
+        }
+
+        if (!Number.isInteger(this.activeCommanderId) || !this.players[this.activeCommanderId]) {
+            this.activeCommanderId = 0;
+        }
+
+        this.initialGrantApplied = true;
     }
 
     createPlayers(mode, botCount) {
@@ -338,6 +364,8 @@ class RTSGame {
     }
 
     update(dt) {
+        this.applyInitialResourceGrant();
+
         if (this.statusTimer > 0) {
             this.statusTimer = Math.max(0, this.statusTimer - dt);
         }
@@ -601,7 +629,16 @@ class RTSGame {
             return;
         }
 
-        const tile = this.screenToTile(screenX, screenY);
+        let tile = this.screenToTile(screenX, screenY);
+        if (!tile) {
+            tile = this.screenToTile(this.viewport.width / 2, this.viewport.height / 2);
+        }
+        if (!tile) {
+            const playerBase = this.players[this.getCommanderId()]?.base;
+            if (playerBase) {
+                tile = { x: Math.round(playerBase.x + 2), y: Math.round(playerBase.y + 2) };
+            }
+        }
         if (!tile) {
             this.setStatus('Не удалось определить клетку для строительства.');
             return;
@@ -1303,7 +1340,7 @@ function refreshHud() {
         return;
     }
 
-    const commander = game.players[game.getCommanderId()];
+    const commander = game.players[game.getCommanderId()] || game.players[0] || { resources: cloneResources(DEFAULT_RESOURCES), pop: 0, popCap: 0, name: 'Игрок 1' };
     if (!commander) {
         return;
     }
