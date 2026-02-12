@@ -73,6 +73,7 @@ class RTSGame {
     constructor(config = {}) {
         this.mode = config.mode || 'pve';
         this.botCount = Number.isFinite(config.botCount) ? config.botCount : 2;
+        this.assets = assets;
 
         this.viewport = {
             width: window.innerWidth,
