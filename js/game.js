@@ -72,7 +72,7 @@ class RTSGame {
 
         this.rotation = 0;
         this.camera = { x: 0, y: 0 };
-        this.mouse = { x: 0, y: 0, inside: false };
+        this.mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, inside: true };
         this.moveKeys = { up: false, down: false, left: false, right: false };
 
         this.paused = false;
@@ -121,7 +121,7 @@ class RTSGame {
             isHuman: true,
             isBot: false,
             base: { x: 0, y: 0 },
-            resources: { wood: 260, stone: 190, food: 210, gold: 160 },
+            resources: { wood: 1000, stone: 1000, food: 1000, gold: 1000 },
             pop: 0,
             popCap: 0,
             ai: { thinkCooldown: 0, attackCooldown: 5 }
@@ -135,7 +135,7 @@ class RTSGame {
                 isHuman: true,
                 isBot: false,
                 base: { x: 0, y: 0 },
-                resources: { wood: 260, stone: 190, food: 210, gold: 160 },
+                resources: { wood: 1000, stone: 1000, food: 1000, gold: 1000 },
                 pop: 0,
                 popCap: 0,
                 ai: { thinkCooldown: 0, attackCooldown: 5 }
@@ -153,7 +153,7 @@ class RTSGame {
                 isHuman: false,
                 isBot: true,
                 base: { x: 0, y: 0 },
-                resources: { wood: 260, stone: 190, food: 210, gold: 160 },
+                resources: { wood: 1000, stone: 1000, food: 1000, gold: 1000 },
                 pop: 0,
                 popCap: 0,
                 ai: {
@@ -342,8 +342,8 @@ class RTSGame {
             return;
         }
 
-        const margin = 22;
-        const speed = 520;
+        const margin = 28;
+        const speed = 860;
 
         if (this.mouse.x <= margin) {
             this.camera.x += speed * dt;
@@ -360,7 +360,7 @@ class RTSGame {
     }
 
     updateKeyboardScroll(dt) {
-        const speed = 620;
+        const speed = 940;
 
         if (this.moveKeys.left) {
             this.camera.x += speed * dt;
@@ -387,6 +387,21 @@ class RTSGame {
             this.moveKeys.left = nextPressed;
         }
         if (code === 'KeyD' || code === 'ArrowRight') {
+            this.moveKeys.right = nextPressed;
+        }
+    }
+
+    setMoveKeyByKeyValue(keyValue, nextPressed) {
+        if (keyValue === 'w' || keyValue === 'ц') {
+            this.moveKeys.up = nextPressed;
+        }
+        if (keyValue === 's' || keyValue === 'ы') {
+            this.moveKeys.down = nextPressed;
+        }
+        if (keyValue === 'a' || keyValue === 'ф') {
+            this.moveKeys.left = nextPressed;
+        }
+        if (keyValue === 'd' || keyValue === 'в') {
             this.moveKeys.right = nextPressed;
         }
     }
@@ -864,6 +879,12 @@ class RTSGame {
         this.mouse.inside = false;
     }
 
+    handleWindowMouseMove(clientX, clientY) {
+        this.mouse.x = clientX;
+        this.mouse.y = clientY;
+        this.mouse.inside = true;
+    }
+
     handleMouseDown(button, screenX, screenY) {
         if (this.paused || this.ended) {
             return;
@@ -903,8 +924,10 @@ class RTSGame {
         const key = event.key;
         const code = event.code;
         const isRepeat = Boolean(event.repeat);
+        const keyLower = key.toLowerCase();
 
         this.setMoveKey(code, true);
+        this.setMoveKeyByKeyValue(keyLower, true);
 
         if (code === 'KeyQ' && !isRepeat) {
             this.rotate(-1);
@@ -923,10 +946,15 @@ class RTSGame {
             this.drag.active = false;
             this.setStatus('Выход из режима строительства.');
         }
+
+        if (!isRepeat) {
+            this.updateKeyboardScroll(0.033);
+        }
     }
 
     handleKeyUp(event) {
         this.setMoveKey(event.code, false);
+        this.setMoveKeyByKeyValue(event.key.toLowerCase(), false);
     }
 
     updateBots(dt) {
@@ -1343,7 +1371,21 @@ canvas.addEventListener('mousemove', (event) => {
     game.handleMouseMove(pos.x, pos.y);
 });
 
+window.addEventListener('mousemove', (event) => {
+    if (!game || ui.menuOverlay.classList.contains('hidden') === false) {
+        return;
+    }
+    game.handleWindowMouseMove(event.clientX, event.clientY);
+});
+
 canvas.addEventListener('mouseleave', () => {
+    if (!game) {
+        return;
+    }
+    game.handleMouseLeave();
+});
+
+window.addEventListener('mouseleave', () => {
     if (!game) {
         return;
     }
