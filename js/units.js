@@ -1,4 +1,4 @@
-export const UNIT_TYPES = {
+const UNIT_TYPES = {
     villager: {
         label: 'Крестьянин',
         maxHp: 70,
@@ -37,7 +37,7 @@ function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
-export class Unit {
+class Unit {
     constructor(data) {
         this.id = data.id;
         this.ownerId = data.ownerId;
@@ -222,7 +222,7 @@ export class Unit {
     }
 }
 
-export class UnitManager {
+class UnitManager {
     constructor() {
         this.units = [];
         this.nextId = 1;
@@ -313,3 +313,7 @@ export class UnitManager {
         return manager;
     }
 }
+
+window.UNIT_TYPES = UNIT_TYPES;
+window.Unit = Unit;
+window.UnitManager = UnitManager;

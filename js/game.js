@@ -1,8 +1,5 @@
-import { GameMap } from './map.js';
-import { UnitManager, UNIT_TYPES } from './units.js';
-import { BuildingManager, BUILDING_TYPES } from './buildings.js';
-
-const SAVE_KEY = 'stronghold_web_rts_save_v2';
+const SAVE_KEY = 'stronghold_web_rts_save_v3';
+const DEFAULT_RESOURCES = Object.freeze({ wood: 1000, stone: 1000, food: 1000, gold: 1000 });
 
 const START_POSITIONS = [
     { x: 5, y: 5 },
@@ -43,6 +40,18 @@ function cloneResources(resources) {
         stone: resources.stone,
         food: resources.food,
         gold: resources.gold
+    };
+}
+
+function normalizeResources(resources) {
+    if (!resources || typeof resources !== 'object') {
+        return cloneResources(DEFAULT_RESOURCES);
+    }
+    return {
+        wood: Number.isFinite(resources.wood) ? resources.wood : DEFAULT_RESOURCES.wood,
+        stone: Number.isFinite(resources.stone) ? resources.stone : DEFAULT_RESOURCES.stone,
+        food: Number.isFinite(resources.food) ? resources.food : DEFAULT_RESOURCES.food,
+        gold: Number.isFinite(resources.gold) ? resources.gold : DEFAULT_RESOURCES.gold
     };
 }
 
@@ -121,7 +130,7 @@ class RTSGame {
             isHuman: true,
             isBot: false,
             base: { x: 0, y: 0 },
-            resources: { wood: 1000, stone: 1000, food: 1000, gold: 1000 },
+            resources: cloneResources(DEFAULT_RESOURCES),
             pop: 0,
             popCap: 0,
             ai: { thinkCooldown: 0, attackCooldown: 5 }
@@ -135,7 +144,7 @@ class RTSGame {
                 isHuman: true,
                 isBot: false,
                 base: { x: 0, y: 0 },
-                resources: { wood: 1000, stone: 1000, food: 1000, gold: 1000 },
+                resources: cloneResources(DEFAULT_RESOURCES),
                 pop: 0,
                 popCap: 0,
                 ai: { thinkCooldown: 0, attackCooldown: 5 }
@@ -153,7 +162,7 @@ class RTSGame {
                 isHuman: false,
                 isBot: true,
                 base: { x: 0, y: 0 },
-                resources: { wood: 1000, stone: 1000, food: 1000, gold: 1000 },
+                resources: cloneResources(DEFAULT_RESOURCES),
                 pop: 0,
                 popCap: 0,
                 ai: {
@@ -182,6 +191,21 @@ class RTSGame {
     }
 
     loadFromData(data) {
+        const hasCore = data && typeof data === 'object' && data.map && data.units && data.buildings;
+        if (!hasCore) {
+            this.mode = 'pve';
+            this.botCount = 2;
+            this.rotation = 0;
+            this.camera = { x: 0, y: 0 };
+            this.map = new GameMap(40, 40);
+            this.units = new UnitManager();
+            this.buildings = new BuildingManager();
+            this.players = this.createPlayers(this.mode, this.botCount);
+            this.spawnStartingState();
+            this.activeCommanderId = 0;
+            return;
+        }
+
         this.mode = data.mode || 'pve';
         this.botCount = data.botCount || 2;
         this.rotation = data.rotation || 0;
@@ -192,6 +216,14 @@ class RTSGame {
         this.map = GameMap.fromData(data.map);
         this.units = UnitManager.fromData(data.units);
         this.buildings = BuildingManager.fromData(data.buildings);
+
+        if (!Array.isArray(this.players) || this.players.length === 0) {
+            this.players = this.createPlayers(this.mode, this.botCount);
+        }
+
+        for (const player of this.players) {
+            player.resources = normalizeResources(player.resources);
+        }
     }
 
     serialize() {
@@ -1272,6 +1304,9 @@ function refreshHud() {
     }
 
     const commander = game.players[game.getCommanderId()];
+    if (!commander) {
+        return;
+    }
 
     ui.resWood.textContent = formatResource(commander.resources.wood);
     ui.resStone.textContent = formatResource(commander.resources.stone);
@@ -1470,17 +1505,24 @@ function frame(timestamp) {
     const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
     lastTimestamp = timestamp;
 
-    if (game) {
-        game.update(dt);
-        game.render(ctx);
-        refreshHud();
-    } else {
-        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    try {
+        if (game) {
+            game.update(dt);
+            game.render(ctx);
+            refreshHud();
+        } else {
+            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        }
+    } catch (error) {
+        console.error('Frame error:', error);
+        if (game) {
+            game.setStatus('Ошибка выполнения. Откройте консоль браузера.');
+        }
     }
 
     requestAnimationFrame(frame);
 }
 
 resizeCanvas();
-showMenu(true);
+startNewGame();
 requestAnimationFrame(frame);

@@ -5,7 +5,7 @@ function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
-export class GameMap {
+class GameMap {
     constructor(width, height, options = {}) {
         this.width = width;
         this.height = height;
@@ -233,3 +233,5 @@ export class GameMap {
         return map;
     }
 }
+
+window.GameMap = GameMap;

@@ -1,4 +1,4 @@
-export const BUILDING_TYPES = {
+const BUILDING_TYPES = {
     town_center: {
         label: 'Центр города',
         maxHp: 540,
@@ -45,7 +45,7 @@ function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
-export class Building {
+class Building {
     constructor(data) {
         this.id = data.id;
         this.ownerId = data.ownerId;
@@ -136,7 +136,7 @@ export class Building {
     }
 }
 
-export class BuildingManager {
+class BuildingManager {
     constructor() {
         this.buildings = [];
         this.nextId = 1;
@@ -235,3 +235,7 @@ export class BuildingManager {
         return manager;
     }
 }
+
+window.BUILDING_TYPES = BUILDING_TYPES;
+window.Building = Building;
+window.BuildingManager = BuildingManager;
