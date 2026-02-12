@@ -73,6 +73,7 @@ class RTSGame {
         this.rotation = 0;
         this.camera = { x: 0, y: 0 };
         this.mouse = { x: 0, y: 0, inside: false };
+        this.moveKeys = { up: false, down: false, left: false, right: false };
 
         this.paused = false;
         this.ended = false;
@@ -262,6 +263,9 @@ class RTSGame {
 
     setPaused(nextPaused) {
         this.paused = nextPaused;
+        if (this.paused) {
+            this.resetMoveKeys();
+        }
         this.setStatus(this.paused ? 'Пауза' : 'Игра продолжается');
     }
 
@@ -310,6 +314,7 @@ class RTSGame {
             return;
         }
 
+        this.updateKeyboardScroll(dt);
         this.updateEdgeScroll(dt);
 
         this.economyTimer += dt;
@@ -352,6 +357,45 @@ class RTSGame {
         if (this.mouse.y >= this.viewport.height - margin) {
             this.camera.y -= speed * dt;
         }
+    }
+
+    updateKeyboardScroll(dt) {
+        const speed = 620;
+
+        if (this.moveKeys.left) {
+            this.camera.x += speed * dt;
+        }
+        if (this.moveKeys.right) {
+            this.camera.x -= speed * dt;
+        }
+        if (this.moveKeys.up) {
+            this.camera.y += speed * dt;
+        }
+        if (this.moveKeys.down) {
+            this.camera.y -= speed * dt;
+        }
+    }
+
+    setMoveKey(code, nextPressed) {
+        if (code === 'KeyW' || code === 'ArrowUp') {
+            this.moveKeys.up = nextPressed;
+        }
+        if (code === 'KeyS' || code === 'ArrowDown') {
+            this.moveKeys.down = nextPressed;
+        }
+        if (code === 'KeyA' || code === 'ArrowLeft') {
+            this.moveKeys.left = nextPressed;
+        }
+        if (code === 'KeyD' || code === 'ArrowRight') {
+            this.moveKeys.right = nextPressed;
+        }
+    }
+
+    resetMoveKeys() {
+        this.moveKeys.up = false;
+        this.moveKeys.down = false;
+        this.moveKeys.left = false;
+        this.moveKeys.right = false;
     }
 
     recalculatePopulationAll() {
@@ -454,6 +498,9 @@ class RTSGame {
     }
 
     canPlaceBuilding(playerId, type, x, y) {
+        void playerId;
+        void type;
+
         if (!this.map.isInside(x, y)) {
             return false;
         }
@@ -461,26 +508,7 @@ class RTSGame {
         if (this.buildings.getAt(x, y)) {
             return false;
         }
-
-        if (this.map.getHeight(x, y) >= 3) {
-            return false;
-        }
-
-        const ownBuildings = this.buildings.getBuildingsForOwner(playerId);
-        if (ownBuildings.length === 0) {
-            return false;
-        }
-
-        let hasNearby = false;
-        for (const building of ownBuildings) {
-            const dist2 = distanceSquared(building.x, building.y, x, y);
-            if (dist2 <= 64) {
-                hasNearby = true;
-                break;
-            }
-        }
-
-        return hasNearby;
+        return true;
     }
 
     tryPlaceBuilding(playerId, type, x, y, silent = false) {
@@ -521,13 +549,19 @@ class RTSGame {
         }
     }
 
-    tryBuildAtHoveredTile() {
-        if (!this.pendingBuildType || !this.hoveredTile) {
+    tryBuildAtScreen(screenX, screenY) {
+        if (!this.pendingBuildType) {
+            return;
+        }
+
+        const tile = this.screenToTile(screenX, screenY);
+        if (!tile) {
+            this.setStatus('Не удалось определить клетку для строительства.');
             return;
         }
 
         const playerId = this.getCommanderId();
-        const placed = this.tryPlaceBuilding(playerId, this.pendingBuildType, this.hoveredTile.x, this.hoveredTile.y);
+        const placed = this.tryPlaceBuilding(playerId, this.pendingBuildType, tile.x, tile.y);
         if (placed) {
             this.pendingBuildType = null;
         }
@@ -837,7 +871,7 @@ class RTSGame {
 
         if (button === 0) {
             if (this.pendingBuildType) {
-                this.tryBuildAtHoveredTile();
+                this.tryBuildAtScreen(screenX, screenY);
                 return;
             }
 
@@ -865,24 +899,34 @@ class RTSGame {
         this.drag.active = false;
     }
 
-    handleKeyDown(key) {
-        if (key === 'q' || key === 'Q') {
+    handleKeyDown(event) {
+        const key = event.key;
+        const code = event.code;
+        const isRepeat = Boolean(event.repeat);
+
+        this.setMoveKey(code, true);
+
+        if (code === 'KeyQ' && !isRepeat) {
             this.rotate(-1);
         }
-        if (key === 'e' || key === 'E') {
+        if (code === 'KeyE' && !isRepeat) {
             this.rotate(1);
         }
-        if (key === ' ') {
+        if (code === 'Space' && !isRepeat) {
             this.togglePause();
         }
-        if ((key === 'Tab' || key === 't') && this.mode === 'pvp') {
+        if ((code === 'Tab' || code === 'KeyT') && this.mode === 'pvp' && !isRepeat) {
             this.switchCommander();
         }
-        if (key === 'Escape') {
+        if (key === 'Escape' && !isRepeat) {
             this.pendingBuildType = null;
             this.drag.active = false;
             this.setStatus('Выход из режима строительства.');
         }
+    }
+
+    handleKeyUp(event) {
+        this.setMoveKey(event.code, false);
     }
 
     updateBots(dt) {
@@ -1209,8 +1253,8 @@ function refreshHud() {
 
     ui.activePlayerText.textContent = `Активный игрок: ${commander.name}`;
     ui.controlsText.textContent = game.mode === 'pvp'
-        ? 'Q/E поворот, ПКМ движение/атака, Tab переключает игрока, у края экрана - прокрутка камеры.'
-        : 'Q/E поворот, ПКМ движение/атака, у края экрана - прокрутка камеры.';
+        ? 'Q/E поворот, WASD/стрелки двигают камеру, ПКМ движение/атака, Tab переключает игрока, у края экрана - прокрутка камеры.'
+        : 'Q/E поворот, WASD/стрелки двигают камеру, ПКМ движение/атака, у края экрана - прокрутка камеры.';
 
     ui.statusText.textContent = `Статус: ${game.statusText}`;
 
@@ -1339,10 +1383,14 @@ canvas.addEventListener('contextmenu', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
-    if (event.key === 'Tab') {
-        event.preventDefault();
-    }
-    if (event.key === ' ') {
+    if (
+        event.code === 'Tab'
+        || event.code === 'Space'
+        || event.code === 'ArrowUp'
+        || event.code === 'ArrowDown'
+        || event.code === 'ArrowLeft'
+        || event.code === 'ArrowRight'
+    ) {
         event.preventDefault();
     }
 
@@ -1356,7 +1404,22 @@ window.addEventListener('keydown', (event) => {
         return;
     }
 
-    game.handleKeyDown(event.key);
+    game.handleKeyDown(event);
+});
+
+window.addEventListener('keyup', (event) => {
+    if (!game) {
+        return;
+    }
+    game.handleKeyUp(event);
+});
+
+window.addEventListener('blur', () => {
+    if (!game) {
+        return;
+    }
+    game.resetMoveKeys();
+    game.handleMouseLeave();
 });
 
 window.addEventListener('resize', resizeCanvas);
